@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Pac Man</title>
+  <style>
+    body {
+      background-color: black;
+    }
+
+    #source_image {
+      display: none;
+    }
+
+    #left_panel {
+      width: 460px;
+      position: absolute;
+      top: 30px;
+      left: 0;
+      border-right: 2px solid white;
+      padding: 1vw;
+    }
+
+    #left_text {
+      width: 460px;
+      color: white;
+      position: absolute;
+      top: 10px;
+      left: 0px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    #right_panel {
+      width: 1050px;
+      position: absolute;
+      top: 30px;
+      right: 0;
+      padding: 1vw;
+    }
+
+    #right_text {
+      width: 1050px;
+      color: white;
+      position: absolute;
+      top: 10px;
+      right: 0px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .item {
+      border: 1px dotted white;
+      opacity: 0.5;
+      margin: 1px;
+    }
+
+    .item-active {
+      border: 1px dotted white;
+      margin: 1px;
+      display: inline-block;
+      cursor: pointer;
+    }
+
+
+    .item:hover {
+      opacity: 1;
+    }
+
+    .item-active.item-clicked {
+      border-color: red;
+    }
+
+    .selection {
+      position: absolute;
+      top: 0;
+      left: 0;
+      background: rgba(255, 255, 0, 0.5);
+    }
+
+    .possible-paste {
+      border-color: green;
+    }
+  </style>
+  <script>
+    window.addEventListener('load', (event) => {
+      var img = document.querySelector("#source_image");
+      var clicked_fields = [];
+      var startX;
+      var startY;
+      var select = false;
+      var copied = [];
+
+      function clearGreen() {
+        var fields = document.querySelectorAll(".possible-paste");
+        for (var i = 0; i < fields.length; i++) {
+          fields[i].classList.remove("possible-paste");
+          var ctx = fields[i].getContext('2d');
+          ctx.clearRect(0, 0, 25, 25);
+        }
+      }
+
+      function changeClicked() {
+        var all_fields = document.querySelectorAll(".item-active");
+        for (var i = 0; i < all_fields.length; i++) {
+          all_fields[i].classList.remove("item-clicked");
+        }
+      }
+
+      function clearForMultiple() {
+        var all_fields = document.querySelectorAll(".item-active");
+        for (var i = 0; i < all_fields.length; i++) {
+          if (!clicked_fields.includes(all_fields[i])) {
+
+            var selection = document.querySelector(".selection");
+            var rectSelection = selection.getBoundingClientRect();
+            var rect = all_fields[i].getBoundingClientRect();
+
+            if (!(rect.top + rect.height > rectSelection.top
+              && rect.left + rect.width > rectSelection.left
+              && rect.bottom - rect.height < rectSelection.bottom
+              && rect.right - rect.width < rectSelection.right)) {
+              all_fields[i].classList.remove("item-clicked");
+            }
+          }
+        }
+      }
+
+      function removeSelection() {
+        var div = document.querySelector(".selection");
+        div.parentNode.removeChild(div);
+        select = false;
+      }
+
+      function select_multiple(e) {
+        if (select) {
+          var new_y = e.clientY + window.scrollY;
+          var width = Math.abs(Math.abs(startX) - Math.abs(e.clientX));
+          var height = Math.abs(Math.abs(startY) - Math.abs(new_y));
+          var div = document.querySelector(".selection");
+          div.style.width = width + "px";
+          div.style.height = height + "px";
+          if (e.clientX > startX) {
+            div.style.left = startX + "px";
+          } else {
+            div.style.left = e.clientX + "px";
+          }
+
+          if (new_y > startY) {
+            div.style.top = startY + "px";
+          } else {
+            div.style.top = new_y + "px";
+          }
+
+          document.body.appendChild(div);
+
+          clearForMultiple();
+
+          var selection = document.querySelector(".selection");
+          var rectSelection = selection.getBoundingClientRect();
+          [].forEach.call(document.querySelectorAll(".item-active"), function (item) {
+            var rect = item.getBoundingClientRect();
+
+            if (rect.top + rect.height > rectSelection.top
+              && rect.left + rect.width > rectSelection.left
+              && rect.bottom - rect.height < rectSelection.bottom
+              && rect.right - rect.width < rectSelection.right) {
+              item.classList.add("item-clicked");
+            }
+          });
+        }
+      }
+
+      var sX = 0;
+      var sY = 0;
+      for (var i = 0; i < 640; i++) {
+        var canvas = document.createElement("CANVAS");
+        canvas.width = 25;
+        canvas.height = 25;
+        canvas.classList.add("item");
+        canvas.addEventListener("click", function () {
+          for (var i = 0; i < clicked_fields.length; i++) {
+            var data = this.data.split(":");
+            var draw_ctx = clicked_fields[i].getContext('2d');
+            draw_ctx.drawImage(img, parseInt(data[0]), parseInt(data[1]), 50, 50, 0, 0, 25, 25);
+          }
+
+          if (document.querySelector("#automatic").checked) {
+            var items = document.querySelectorAll(".item-active");
+            var iter;
+            for (var i = 0; i < items.length; i++) {
+              if (items[i] == clicked_fields[clicked_fields.length - 1] && i + 1 < items.length) {
+                iter = i + 1;
+              }
+            }
+
+            clicked_fields = [];
+            changeClicked();
+            items[iter].classList.add("item-clicked");
+            clicked_fields.push(items[iter]);
+          }
+        })
+        document.querySelector("#left_panel").appendChild(canvas);
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(img, sX, sY, 50, 50, 0, 0, 25, 25);
+        canvas.data = sX + ":" + sY;
+        if (i % 32 == 0 && i > 0) {
+          sX = 0;
+          sY += 48;
+        } else {
+          sX += 48;
+        }
+      }
+
+      for (var i = 0; i < 1015; i++) {
+        if (i != 0 && i % 35 == 0) {
+          document.querySelector("#right_panel").appendChild(document.createElement("br"));
+        }
+        var canvas = document.createElement("CANVAS");
+        canvas.width = 25;
+        canvas.height = 25;
+        canvas.id = "id_" + i;
+        canvas.classList.add("item-active");
+        document.querySelector("#right_panel").appendChild(canvas);
+      }
+
+      document.querySelector("#right_panel").addEventListener("mousedown", function (e) {
+        if (navigator.platform == "MacIntel") {
+          if (!e.metaKey) {
+            clicked_fields = [];
+            changeClicked();
+          }
+        } else {
+          if (!e.ctrlKey) {
+            clicked_fields = [];
+            changeClicked();
+          }
+        }
+        startX = e.clientX;
+        startY = e.clientY + window.scrollY;
+        var div = document.createElement("div");
+        div.classList.add("selection");
+        div.style.width = 1 + "px";
+        div.style.height = 1 + "px";
+
+        div.style.left = startX + "px";
+        div.style.top = startY + "px";
+
+        div.addEventListener("mousemove", function (e) {
+          select_multiple(e)
+        })
+        document.body.appendChild(div);
+        select = true;
+      })
+
+      document.querySelector("#right_panel").addEventListener("mousemove", function (e) {
+        select_multiple(e)
+      })
+
+      window.addEventListener("mouseup", function (e) {
+        if (navigator.platform == "MacIntel") {
+          if (!e.metaKey) {
+            changeClicked();
+          }
+        } else {
+          if (!e.ctrlKey) {
+            changeClicked();
+          }
+        }
+        var selection = document.querySelector(".selection");
+        var rectSelection = selection.getBoundingClientRect();
+
+        [].forEach.call(document.querySelectorAll(".item-active"), function (item) {
+          var rect = item.getBoundingClientRect();
+
+          if (rect.top + rect.height > rectSelection.top
+            && rect.left + rect.width > rectSelection.left
+            && rect.bottom - rect.height < rectSelection.bottom
+            && rect.right - rect.width < rectSelection.right) {
+
+
+            if (clicked_fields.includes(item)) {
+              item.classList.remove("item-clicked");
+              var index = clicked_fields.indexOf(item);
+              clicked_fields.splice(index, 1);
+            } else {
+              item.classList.add("item-clicked");
+              clicked_fields.push(item);
+            }
+          }
+        });
+        removeSelection();
+      })
+
+
+      // ctrl + c
+      window.addEventListener("keydown", function (e) {
+        var ctrl = false;
+        if (navigator.platform == "MacIntel") {
+          if (e.metaKey) {
+            ctrl = true;
+          }
+        } else {
+          if (e.ctrlKey) {
+            ctrl = true;
+          }
+        }
+
+        if (e.keyCode == 67 && ctrl) {
+          copied = clicked_fields;
+        }
+      });
+
+      // ctrl + v
+      window.addEventListener("keydown", function (e) {
+        var ctrl = false;
+        if (navigator.platform == "MacIntel") {
+          if (e.metaKey) {
+            ctrl = true;
+          }
+        } else {
+          if (e.ctrlKey) {
+            ctrl = true;
+          }
+        }
+
+        if (e.keyCode == 86 && ctrl) {
+          if (copied.length > 0) {
+            //this one is also for my pasting
+            var minus = parseInt(copied[0].id.split("_")[1]);
+
+
+            // pasting for Mr
+            document.querySelector("#right_panel").addEventListener("mousemove", function (e) {
+              //sprawdzaj czy przeszło granicę 48px - lepsza optymalizacja
+              // usuń inne listenery
+              // paste
+              clearGreen();
+              var x = e.clientX
+              var y = e.clientY
+              var elementMouseIsOver = document.elementFromPoint(x, y);
+              var start = parseInt(elementMouseIsOver.id.split("_")[1]);
+              for (var i = 0; i < copied.length; i++) {
+                var add = parseInt(copied[i].id.split("_")[1]) - minus
+                var id = "#id_" + (start + add);
+                document.querySelector(id).classList.add("possible-paste");
+                var ctx = document.querySelector(id).getContext('2d');
+                ctx.drawImage(copied[i], 0, 0, 25, 25, 0, 0, 25, 25);
+              }
+            })
+            //end of pasting for Mr
+
+
+            // my pasting
+            // var start = parseInt(clicked_fields[0].id.split("_")[1]);
+            // for (var i = 0; i < copied.length; i++) {
+            //   var add = parseInt(copied[i].id.split("_")[1]) - minus
+            //   var id = "#id_" + (start + add);
+            //   var ctx = document.querySelector(id).getContext('2d');
+            //   ctx.drawImage(copied[i], 0, 0, 25, 25, 0, 0, 25, 25);
+            // }
+          }
+        }
+      });
+
+
+
+    });
+  </script>
+</head>
+
+<body>
+  <img src="pola.png" id="source_image" />
+  <div id="left_text">Items</div>
+  <div id="left_panel"></div>
+  <div id="right_text">Map <input type="checkbox" id="automatic" /> automat</div>
+  <div id="right_panel"></div>
+</body>
+
+</html>
