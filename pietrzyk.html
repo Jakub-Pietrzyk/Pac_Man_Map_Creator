@@ -16,7 +16,7 @@
     }
 
     #left_panel {
-      width: 460px;
+      width: 470px;
       position: absolute;
       top: 30px;
       left: 0;
@@ -25,7 +25,7 @@
     }
 
     #left_text {
-      width: 460px;
+      width: 470px;
       color: white;
       position: absolute;
       top: 10px;
@@ -95,14 +95,22 @@
       var startY;
       var select = false;
       var copied = [];
+      var possible_paste = [];
+      var pasting = false;
 
       function clearGreen() {
-        var fields = document.querySelectorAll(".possible-paste");
-        for (var i = 0; i < fields.length; i++) {
-          fields[i].classList.remove("possible-paste");
-          var ctx = fields[i].getContext('2d');
-          ctx.clearRect(0, 0, 25, 25);
+        for (var i = 0; i < possible_paste.length; i++) {
+          var old_obj_info = possible_paste[i];
+          var new_obj = document.querySelector(old_obj_info.id);
+          new_obj.classList.remove("possible-paste");
+          var ctx = new_obj.getContext('2d');
+          if (old_obj_info.sX != "") {
+            ctx.drawImage(img, parseInt(old_obj_info.sX), parseInt(old_obj_info.sY), 50, 50, 0, 0, 25, 25);
+          } else {
+            ctx.clearRect(0, 0, 25, 25);
+          }
         }
+        possible_paste = []
       }
 
       function changeClicked() {
@@ -186,6 +194,7 @@
         canvas.addEventListener("click", function () {
           for (var i = 0; i < clicked_fields.length; i++) {
             var data = this.data.split(":");
+            clicked_fields[i].data = this.data;
             var draw_ctx = clicked_fields[i].getContext('2d');
             draw_ctx.drawImage(img, parseInt(data[0]), parseInt(data[1]), 50, 50, 0, 0, 25, 25);
           }
@@ -207,9 +216,9 @@
         })
         document.querySelector("#left_panel").appendChild(canvas);
         var ctx = canvas.getContext('2d');
-        ctx.drawImage(img, sX, sY, 50, 50, 0, 0, 25, 25);
+        ctx.drawImage(img, sX, sY, 48, 48, 0, 0, 25, 25);
         canvas.data = sX + ":" + sY;
-        if (i % 32 == 0 && i > 0) {
+        if (i % 16 == 0 && i > 0) {
           sX = 0;
           sY += 48;
         } else {
@@ -225,76 +234,83 @@
         canvas.width = 25;
         canvas.height = 25;
         canvas.id = "id_" + i;
+        canvas.data = ":";
         canvas.classList.add("item-active");
         document.querySelector("#right_panel").appendChild(canvas);
       }
 
       document.querySelector("#right_panel").addEventListener("mousedown", function (e) {
-        if (navigator.platform == "MacIntel") {
-          if (!e.metaKey) {
-            clicked_fields = [];
-            changeClicked();
+        if (!pasting) {
+          if (navigator.platform == "MacIntel") {
+            if (!e.metaKey) {
+              clicked_fields = [];
+              changeClicked();
+            }
+          } else {
+            if (!e.ctrlKey) {
+              clicked_fields = [];
+              changeClicked();
+            }
           }
-        } else {
-          if (!e.ctrlKey) {
-            clicked_fields = [];
-            changeClicked();
-          }
+          startX = e.clientX;
+          startY = e.clientY + window.scrollY;
+          var div = document.createElement("div");
+          div.classList.add("selection");
+          div.style.width = 1 + "px";
+          div.style.height = 1 + "px";
+
+          div.style.left = startX + "px";
+          div.style.top = startY + "px";
+
+          div.addEventListener("mousemove", function (e) {
+            select_multiple(e)
+          })
+          document.body.appendChild(div);
+          select = true;
         }
-        startX = e.clientX;
-        startY = e.clientY + window.scrollY;
-        var div = document.createElement("div");
-        div.classList.add("selection");
-        div.style.width = 1 + "px";
-        div.style.height = 1 + "px";
-
-        div.style.left = startX + "px";
-        div.style.top = startY + "px";
-
-        div.addEventListener("mousemove", function (e) {
-          select_multiple(e)
-        })
-        document.body.appendChild(div);
-        select = true;
       })
 
       document.querySelector("#right_panel").addEventListener("mousemove", function (e) {
-        select_multiple(e)
+        if (!pasting) {
+          select_multiple(e)
+        }
       })
 
       window.addEventListener("mouseup", function (e) {
-        if (navigator.platform == "MacIntel") {
-          if (!e.metaKey) {
-            changeClicked();
-          }
-        } else {
-          if (!e.ctrlKey) {
-            changeClicked();
-          }
-        }
-        var selection = document.querySelector(".selection");
-        var rectSelection = selection.getBoundingClientRect();
-
-        [].forEach.call(document.querySelectorAll(".item-active"), function (item) {
-          var rect = item.getBoundingClientRect();
-
-          if (rect.top + rect.height > rectSelection.top
-            && rect.left + rect.width > rectSelection.left
-            && rect.bottom - rect.height < rectSelection.bottom
-            && rect.right - rect.width < rectSelection.right) {
-
-
-            if (clicked_fields.includes(item)) {
-              item.classList.remove("item-clicked");
-              var index = clicked_fields.indexOf(item);
-              clicked_fields.splice(index, 1);
-            } else {
-              item.classList.add("item-clicked");
-              clicked_fields.push(item);
+        if (!pasting) {
+          if (navigator.platform == "MacIntel") {
+            if (!e.metaKey) {
+              changeClicked();
+            }
+          } else {
+            if (!e.ctrlKey) {
+              changeClicked();
             }
           }
-        });
-        removeSelection();
+          var selection = document.querySelector(".selection");
+          var rectSelection = selection.getBoundingClientRect();
+
+          [].forEach.call(document.querySelectorAll(".item-active"), function (item) {
+            var rect = item.getBoundingClientRect();
+
+            if (rect.top + rect.height > rectSelection.top
+              && rect.left + rect.width > rectSelection.left
+              && rect.bottom - rect.height < rectSelection.bottom
+              && rect.right - rect.width < rectSelection.right) {
+
+
+              if (clicked_fields.includes(item)) {
+                item.classList.remove("item-clicked");
+                var index = clicked_fields.indexOf(item);
+                clicked_fields.splice(index, 1);
+              } else {
+                item.classList.add("item-clicked");
+                clicked_fields.push(item);
+              }
+            }
+          });
+          removeSelection();
+        }
       })
 
 
@@ -312,7 +328,14 @@
         }
 
         if (e.keyCode == 67 && ctrl) {
-          copied = clicked_fields;
+          copied = [];
+          for (var i = 0; i < clicked_fields.length; i++) {
+            var obj = {}
+            obj.id = clicked_fields[i].id.split("_")[1];
+            obj.sX = clicked_fields[i].data.split(":")[0];
+            obj.sY = clicked_fields[i].data.split(":")[1];
+            copied.push(obj)
+          }
         }
       });
 
@@ -331,13 +354,15 @@
 
         if (e.keyCode == 86 && ctrl) {
           if (copied.length > 0) {
+            pasting = true;
+            clicked_fields = [];
+            changeClicked();
             //this one is also for my pasting
-            var minus = parseInt(copied[0].id.split("_")[1]);
+            var minus = parseInt(copied[0].id);
 
 
             // pasting for Mr
             document.querySelector("#right_panel").addEventListener("mousemove", function (e) {
-              //sprawdzaj czy przeszło granicę 48px - lepsza optymalizacja
               // usuń inne listenery
               // paste
               clearGreen();
@@ -346,11 +371,13 @@
               var elementMouseIsOver = document.elementFromPoint(x, y);
               var start = parseInt(elementMouseIsOver.id.split("_")[1]);
               for (var i = 0; i < copied.length; i++) {
-                var add = parseInt(copied[i].id.split("_")[1]) - minus
+                var add = parseInt(copied[i].id) - minus
                 var id = "#id_" + (start + add);
                 document.querySelector(id).classList.add("possible-paste");
+                var data = document.querySelector(id).data.split(":");
+                possible_paste.push({ id: id, sX: data[0], sY: data[1] })
                 var ctx = document.querySelector(id).getContext('2d');
-                ctx.drawImage(copied[i], 0, 0, 25, 25, 0, 0, 25, 25);
+                ctx.drawImage(img, parseInt(copied[i].sX), parseInt(copied[i].sY), 48, 48, 0, 0, 25, 25);
               }
             })
             //end of pasting for Mr
@@ -359,14 +386,58 @@
             // my pasting
             // var start = parseInt(clicked_fields[0].id.split("_")[1]);
             // for (var i = 0; i < copied.length; i++) {
-            //   var add = parseInt(copied[i].id.split("_")[1]) - minus
+            //   var add = parseInt(copied[i].id) - minus
             //   var id = "#id_" + (start + add);
             //   var ctx = document.querySelector(id).getContext('2d');
-            //   ctx.drawImage(copied[i], 0, 0, 25, 25, 0, 0, 25, 25);
+            //   ctx.drawImage(img, parseInt(copied[i].sX), parseInt(copied[i].sY), 25, 25, 0, 0, 25, 25);
             // }
           }
         }
       });
+
+      // delete
+      window.addEventListener("keydown", function (e) {
+        if (e.keyCode == 46) {
+          for (var i = 0; i < clicked_fields.length; i++) {
+            clicked_fields[i].classList.remove("possible-paste");
+            clicked_fields[i].data = ":";
+            var ctx = clicked_fields[i].getContext('2d');
+            ctx.clearRect(0, 0, 25, 25);
+          }
+        }
+      });
+
+      // ctrl + x - cut
+      window.addEventListener("keydown", function (e) {
+        var ctrl = false;
+        if (navigator.platform == "MacIntel") {
+          if (e.metaKey) {
+            ctrl = true;
+          }
+        } else {
+          if (e.ctrlKey) {
+            ctrl = true;
+          }
+        }
+
+        if (e.keyCode == 88 && ctrl) {
+          copied = [];
+          for (var i = 0; i < clicked_fields.length; i++) {
+            var obj = {}
+            obj.id = clicked_fields[i].id.split("_")[1];
+            obj.sX = clicked_fields[i].data.split(":")[0];
+            obj.sY = clicked_fields[i].data.split(":")[1];
+            copied.push(obj)
+
+            clicked_fields[i].classList.remove("possible-paste");
+            clicked_fields[i].data = ":";
+            var ctx = clicked_fields[i].getContext('2d');
+            ctx.clearRect(0, 0, 25, 25);
+          }
+        }
+      });
+
+
 
 
 
@@ -375,7 +446,7 @@
 </head>
 
 <body>
-  <img src="pola.png" id="source_image" />
+  <img src="sprites.png" id="source_image" />
   <div id="left_text">Items</div>
   <div id="left_panel"></div>
   <div id="right_text">Map <input type="checkbox" id="automatic" /> automat</div>
