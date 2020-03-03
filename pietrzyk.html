@@ -236,6 +236,28 @@
         canvas.id = "id_" + i;
         canvas.data = ":";
         canvas.classList.add("item-active");
+
+        canvas.addEventListener("click", function (e) {
+          if(pasting){
+            var minus = parseInt(copied[0].id);
+            clearGreen();
+            var x = e.clientX
+            var y = e.clientY + window.scrollY;
+            var elementMouseIsOver = document.elementFromPoint(x, y);
+            var start = parseInt(elementMouseIsOver.id.split("_")[1]);
+            for (var i = 0; i < copied.length; i++) {
+              var add = parseInt(copied[i].id) - minus
+              var id = "#id_" + (start + add);
+              document.querySelector(id).classList.remove("possible-paste");
+              document.querySelector(id).data = copied[i].sX + ":" + copied[i].sY;
+              var ctx = document.querySelector(id).getContext('2d');
+              ctx.drawImage(img, parseInt(copied[i].sX), parseInt(copied[i].sY), 48, 48, 0, 0, 25, 25);
+            }
+            pasting = false;
+            possible_paste = [];
+          }
+        })
+
         document.querySelector("#right_panel").appendChild(canvas);
       }
 
@@ -363,11 +385,10 @@
 
             // pasting for Mr
             document.querySelector("#right_panel").addEventListener("mousemove", function (e) {
-              // usuń inne listenery
-              // paste
+              if(pasting){
               clearGreen();
               var x = e.clientX
-              var y = e.clientY
+              var y = e.clientY + window.scrollY;
               var elementMouseIsOver = document.elementFromPoint(x, y);
               var start = parseInt(elementMouseIsOver.id.split("_")[1]);
               for (var i = 0; i < copied.length; i++) {
@@ -378,10 +399,9 @@
                 possible_paste.push({ id: id, sX: data[0], sY: data[1] })
                 var ctx = document.querySelector(id).getContext('2d');
                 ctx.drawImage(img, parseInt(copied[i].sX), parseInt(copied[i].sY), 48, 48, 0, 0, 25, 25);
-              }
+              }}
             })
             //end of pasting for Mr
-
 
             // my pasting
             // var start = parseInt(clicked_fields[0].id.split("_")[1]);
