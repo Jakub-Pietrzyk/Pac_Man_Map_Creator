@@ -242,7 +242,7 @@
             var minus = parseInt(copied[0].id);
             clearGreen();
             var x = e.clientX
-            var y = e.clientY + window.scrollY;
+            var y = e.clientY;
             var elementMouseIsOver = document.elementFromPoint(x, y);
             var start = parseInt(elementMouseIsOver.id.split("_")[1]);
             for (var i = 0; i < copied.length; i++) {
@@ -388,7 +388,7 @@
               if(pasting){
               clearGreen();
               var x = e.clientX
-              var y = e.clientY + window.scrollY;
+              var y = e.clientY;
               var elementMouseIsOver = document.elementFromPoint(x, y);
               var start = parseInt(elementMouseIsOver.id.split("_")[1]);
               for (var i = 0; i < copied.length; i++) {
